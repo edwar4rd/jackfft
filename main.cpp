@@ -28,9 +28,10 @@
 #include <jack/jack.h>
 #include <math.h>
 #include <fftw3.h>
-#include <SDL/SDL.h>
-#include <GL/gl.h>
-#include <GL/glu.h>
+// #include <SDL/SDL.h>
+// #include <GL/gl.h>
+// #include <GL/glu.h>
+#include <SDL2/SDL.h>
 
 jack_client_t* client;
 jack_port_t* jackport;
@@ -62,12 +63,12 @@ int process(jack_nframes_t nframes, void* data) {
 void window_resize(int width, int height) {
 	if (height==0) height = 1;
 
-	SDL_SetVideoMode(width, height, 32, SDL_OPENGL|SDL_RESIZABLE);
+	// SDL_SetVideoMode(width, height, 32, SDL_OPENGL|SDL_RESIZABLE);
 
-	glViewport(0, 0, width, height);
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	glOrtho(0, 1, 0, 1, 0, 1);
+	// glViewport(0, 0, width, height);
+	// glMatrixMode(GL_PROJECTION);
+	// glLoadIdentity();
+	// glOrtho(0, 1, 0, 1, 0, 1);
 
 	while(buffer_locked) sched_yield();
 	buffer_locked = true;
@@ -110,24 +111,26 @@ int main(int argc, char** argv) {
 	jackport = jack_port_register(client, "input", JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, 0);
 
 	
-	//SDL_Surface* screen;
+	// //SDL_Surface* screen;
 	SDL_Init(SDL_INIT_VIDEO);
-	SDL_SetVideoMode(480, 360, 32, SDL_OPENGL|SDL_RESIZABLE);
-	window_resize(480, 360);
-	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
-	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
-	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
-	SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
-	//SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16);
-	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-
-	SDL_WM_SetCaption(client_name, NULL);
-	
-	glDisable(GL_DEPTH_TEST);
-	glMatrixMode(GL_PROJECTION);
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glEnable(GL_POLYGON_SMOOTH);
+	SDL_Window *wwindow = SDL_CreateWindow(client_name, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 480, 360, SDL_WINDOW_RESIZABLE);
+	SDL_Renderer *rrenderer = SDL_CreateRenderer(wwindow, -1, SDL_RENDERER_ACCELERATED);
+	// SDL_SetVideoMode(480, 360, 32, SDL_OPENGL|SDL_RESIZABLE);
+	// window_resize(480, 360);
+	// SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
+	// SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
+	// SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
+	// SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
+	// //SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16);
+	// SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	// 
+	// SDL_WM_SetCaption(client_name, NULL);
+	// 
+	// glDisable(GL_DEPTH_TEST);
+	// glMatrixMode(GL_PROJECTION);
+	// glEnable(GL_BLEND);
+	// glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	// glEnable(GL_POLYGON_SMOOTH);
 
 	bool working = true;
 	SDL_Event event;
@@ -149,19 +152,20 @@ int main(int argc, char** argv) {
 	fftwf_plan fft;
 	bool fft_alloc = false;
 	buffer_input = buffer_1;
+	Uint32 w_w = 480, w_h = 360;
 
 	jack_activate(client);
 
-	/*glLoadIdentity();
-	glOrtho(0, 1, 0, 1, 0, 1);
-	glColor4f(1, 1, 1, 1);*/
+	// /*glLoadIdentity();
+	// glOrtho(0, 1, 0, 1, 0, 1);
+	// glColor4f(1, 1, 1, 1);*/
 	sample fft_peak = 0;
 	while(true) {
 		SDL_PollEvent(&event);
-		if ((SDL_GetAppState() && SDL_APPACTIVE) == 0) {
-			usleep(100000);
-			continue;
-		}
+		// if ((SDL_GetAppState() && SDL_APPACTIVE) == 0) {
+		// 	usleep(100000);
+		// 	continue;
+		// }
 
 		while (buffer_locked) sched_yield();
 		buffer_locked = true;
@@ -205,17 +209,27 @@ int main(int argc, char** argv) {
 
 			
 		usleep(20000);
-		glFinish();
+		// glFinish();
 
 		if (event.type==SDL_QUIT) break;
-		if (event.type==SDL_VIDEORESIZE) {
-			window_resize(event.resize.w, event.resize.h);
-		}
-		if (buffer_size==0) continue;
-			
-		glClear(GL_COLOR_BUFFER_BIT);
+		// if (event.type==SDL_VIDEORESIZE) {
+		// 	window_resize(event.resize.w, event.resize.h);
+		// }
+		if (event.type == SDL_WINDOWEVENT) {
+            if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
+                window_resize(event.window.data1, event.window.data2);
+                w_w = event.window.data1;
+                w_h = event.window.data2;
+            }
+        }
+        if (buffer_size==0) continue;
+		
+		// glClear(GL_COLOR_BUFFER_BIT);
+		SDL_SetRenderDrawBlendMode(rrenderer, SDL_BLENDMODE_ADD);
+        SDL_SetRenderDrawColor(rrenderer, 0, 0, 0, 255);
+        SDL_RenderClear(rrenderer);
 
-		glBegin(GL_QUADS);
+		// glBegin(GL_QUADS);
 /*		glVertex2f(0.5, 1); //top
 		glVertex2f(0, 0.5); //left
 		glVertex2f(0.5, 0); //bottom
@@ -256,26 +270,49 @@ int main(int argc, char** argv) {
 			y = (buff_disp_prev[i]+buff_disp_prev[i-1]/2.0f+buff_disp_prev[i+1]/2.0f)/2.0f;
 			color_from_value(x1+y*0.3, c_r, c_g, c_b);
 			if ((v>0) && (v<1)) {
-				glColor4f(c_r,c_g,c_b, y/2.0);
-				glVertex2f(x1, 0);
-				glVertex2f(x2, 0);
-				glVertex2f(x2, v);
-				glVertex2f(x1, v);
+				// glColor4f(c_r,c_g,c_b, y/2.0);
+				// glVertex2f(x1, 0);
+				// glVertex2f(x2, 0);
+				// glVertex2f(x2, v);
+				// glVertex2f(x1, v);
+				
+				SDL_SetRenderDrawColor(rrenderer, Uint8(255 * c_r),
+                                       Uint8(255 * c_g), Uint8(255 * c_b),
+                                       Uint8((y / 2.0) * 255.0));
+                SDL_FRect rect;
+                rect.x = x1 * w_w;
+                rect.y = (1 - v) * w_h;
+                rect.w = (x2 - x1) * w_w;
+                rect.h = v * w_h;
+                SDL_RenderFillRectF(rrenderer, &rect);
+
 			}
 
 			if ((y>0) && (y<1)) {
-				//glColor4f(1, y, 0, 1);
-				glColor4f(c_r, c_g, c_b, y*0.6+0.4);
-				glVertex2f(x1, 0);
-				glVertex2f(x2, 0);
-				glColor4f(c_r, c_g, c_b, y);
-				glVertex2f(x2, y);
-				glVertex2f(x1, y);
+				// //glColor4f(1, y, 0, 1);
+				// glColor4f(c_r, c_g, c_b, y*0.6+0.4);
+				// glVertex2f(x1, 0);
+				// glVertex2f(x2, 0);
+				// glColor4f(c_r, c_g, c_b, y);
+				// glVertex2f(x2, y);
+				// glVertex2f(x1, y);
+				
+				SDL_SetRenderDrawColor(rrenderer, Uint8(255 * c_r),
+						Uint8(255 * c_g), Uint8(255 * c_b),
+						Uint8((y * 0.6 + 0.4) * 255.0));
+                SDL_FRect rect;
+                rect.x = x1 * w_w;
+                rect.y = (1 - y) * w_h;
+                rect.w = (x2 - x1) * w_w;
+                rect.h = y * w_h;
+                SDL_RenderFillRectF(rrenderer, &rect);
+
 			}
 		}
-		glEnd();
-		glFlush();
-		SDL_GL_SwapBuffers();
+		// glEnd();
+		// glFlush();
+		// SDL_GL_SwapBuffers();
+        SDL_RenderPresent(rrenderer);
 	}
 	
 	fftwf_destroy_plan(fft);
