@@ -28,15 +28,20 @@ WHAT DOES IT USE
 ================
  * JACK for audio input
  * FFTW for converting from time domain to frequency domain
- * SDL for cross-platform OpenGL initialization
- * OpenGL for hardware-accelerated display
+ * SDL for cross-platform Graphics and Event Handling
 
 
-WHY DID I WRITE IT
-==================
-Seriously, as an exercise (in JACK and FFTW) before writing some dynamics procesor working in frequency domain.
-You know how modern records are overcompressed; dynamics procesor I want to write will probably be
-multi-band expander bringing dynamics back to music. See also http://en.wikipedia.org/wiki/Loudness_war
+WHY DID I FORK IT
+=================
+I found the original repo while trying to found a working yet simple spectrum viewer to tinker with.
+However last commit is more than ten years ago (though amazingly still working great!), 
+so I decide to port is to modern SDL2 with some feature to make my life easier.
+
+SOME CHANGES OF THIS FORK
+=========================
+ * Ported to SDL2
+ * (TODO)Auto-connect to default input (could be changed through compile options)
+ * (TODO)Configurable video settings in compile options
 
 
 WHY WOULD YOU USE IT
@@ -51,7 +56,7 @@ Hardware-accelerated display (no FFT yet, sorry...) saves CPU even if you run ja
 HOW TO BUILD AND RUN IT
 =======================
 You will need following packages in Debian (paste it after `aptitude install `):
-build-essential libc6-dev libjack-jackd2-dev libfftw3-dev libsdl1.2-dev libgl1-mesa-dev libglu1-mesa-dev
+build-essential libc6-dev libjack-jackd2-dev libfftw3-dev lidsdl2-dev
 After installing them read LICENSE (I don't want to be sued for jackfft burning your GPU etc...) and
 $ make run
 Connect it to some source using qjackctl or similar software and enjoy!
