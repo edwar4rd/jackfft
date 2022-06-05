@@ -167,6 +167,20 @@ int main(int argc, char **argv) {
 
     jack_activate(client);
 
+    // auto connects to port named monitor or the second arg
+    {
+        const char **outport =
+            jack_get_ports(client, argc > 2 ? argv[2] : "monitor",
+                           "32 bit float mono audio", JackPortIsOutput);
+        if (outport) {
+            printf("connected to %s\n", outport[0]);
+            printf("type: %s\n",
+                   jack_port_type(jack_port_by_name(client, outport[0])));
+            jack_connect(client, outport[0], jack_port_name(jackport));
+            jack_free(outport);
+        }
+    }
+
     sample fft_peak = 0;
     while (!quit) {
         while (SDL_PollEvent(&event)) {
