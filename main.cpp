@@ -114,13 +114,35 @@ int main(int argc, char **argv) {
     jackport = jack_port_register(client, "input", JACK_DEFAULT_AUDIO_TYPE,
                                   JackPortIsInput, 0);
 
-    SDL_Init(SDL_INIT_VIDEO);
-    SDL_Window *wwindow = SDL_CreateWindow(client_name, SDL_WINDOWPOS_UNDEFINED,
-                                           SDL_WINDOWPOS_UNDEFINED, 480, 360,
-                                           SDL_WINDOW_RESIZABLE);
-    SDL_Renderer *rrenderer =
-        SDL_CreateRenderer(wwindow, -1, SDL_RENDERER_ACCELERATED);
-
+    if (SDL_Init(SDL_INIT_AUDIO)) {
+        fprintf(stderr, "Error initializaing SDL: %s\n", SDL_GetError());
+        SDL_Quit();
+        jack_client_close(client);
+        exit(1);
+    }
+    SDL_Window *wwindow;
+    {
+        wwindow = SDL_CreateWindow(client_name, SDL_WINDOWPOS_UNDEFINED,
+                                   SDL_WINDOWPOS_UNDEFINED, 480, 360,
+                                   SDL_WINDOW_RESIZABLE);
+        if (wwindow == NULL) {
+            fprintf(stderr, "Error creating window: %s\n", SDL_GetError());
+            SDL_Quit();
+            jack_client_close(client);
+            exit(1);
+        }
+    }
+    SDL_Renderer *rrenderer;
+    {
+        rrenderer = SDL_CreateRenderer(wwindow, -1, SDL_RENDERER_ACCELERATED);
+        if (rrenderer == NULL) {
+            fprintf(stderr, "Error creating renderer: %s\n", SDL_GetError());
+            SDL_DestroyWindow(wwindow);
+            SDL_Quit();
+            jack_client_close(client);
+            exit(1);
+        }
+    }
     bool working = true;
     SDL_Event event;
 
@@ -141,20 +163,34 @@ int main(int argc, char **argv) {
     bool fft_alloc = false;
     buffer_input = buffer_1;
     Uint32 w_w = 480, w_h = 360;
+    bool quit = false;
 
     jack_activate(client);
 
     sample fft_peak = 0;
-    while (true) {
-        SDL_PollEvent(&event);
+    while (!quit) {
+        while (SDL_PollEvent(&event)) {
+            if (event.type == SDL_QUIT)
+                quit = true;
+            if (event.type == SDL_WINDOWEVENT) {
+                if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
+                    window_resize(event.window.data1, event.window.data2);
+                    w_w = event.window.data1;
+                    w_h = event.window.data2;
+                }
+            }
+        }
+        if (quit)
+            break;
 
-        // if ((SDL_GetAppState() && SDL_APPACTIVE) == 0) {
-        // 	usleep(100000);
-        // 	continue;
-        // }
+        if ((SDL_GetWindowFlags(wwindow) && SDL_WINDOW_SHOWN) == 0) {
+            usleep(100000);
+            continue;
+        }
 
         while (buffer_locked)
             sched_yield();
+
         buffer_locked = true;
         memcpy(buff_fft_in, buffer_input, buffer_size * sizeof(sample));
         buffer_locked = false;
@@ -196,15 +232,6 @@ int main(int argc, char **argv) {
 
         usleep(20000);
 
-        if (event.type == SDL_QUIT)
-            break;
-        if (event.type == SDL_WINDOWEVENT) {
-            if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
-                window_resize(event.window.data1, event.window.data2);
-                w_w = event.window.data1;
-                w_h = event.window.data2;
-            }
-        }
         if (buffer_size == 0)
             continue;
 
@@ -294,6 +321,9 @@ int main(int argc, char **argv) {
 
     fftwf_destroy_plan(fft);
     jack_client_close(client);
+
+    SDL_DestroyRenderer(rrenderer);
+    SDL_DestroyWindow(wwindow);
 
     SDL_Quit();
 
