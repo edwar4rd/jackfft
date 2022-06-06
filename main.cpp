@@ -19,6 +19,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+// #define DISP_NO_COLOR 1
+
 #include <SDL2/SDL.h>
 #include <cstdio>
 #include <cstdlib>
@@ -75,6 +77,9 @@ void window_resize(int width, int height) {
 }
 
 void color_from_value(float v, float &r, float &g, float &b) {
+    #if DISP_NO_COLOR
+    r = g = b = 1.0;
+    #else
     // v=1.0-v;
     if (v < 0.0)
         r = 1.0 + v, g = 0, b = 0;
@@ -95,6 +100,7 @@ void color_from_value(float v, float &r, float &g, float &b) {
                         r = (v - 0.8) * 5.0, g = 0, b = 1;
                     else // blue -> purple
                         r = 1, g = v - 1.0, b = 1;
+    #endif
 }
 
 int main(int argc, char **argv) {
@@ -114,7 +120,7 @@ int main(int argc, char **argv) {
     jackport = jack_port_register(client, "input", JACK_DEFAULT_AUDIO_TYPE,
                                   JackPortIsInput, 0);
 
-    if (SDL_Init(SDL_INIT_AUDIO)) {
+    if (SDL_Init(SDL_INIT_VIDEO)) {
         fprintf(stderr, "Error initializaing SDL: %s\n", SDL_GetError());
         SDL_Quit();
         jack_client_close(client);
@@ -185,6 +191,10 @@ int main(int argc, char **argv) {
     while (!quit) {
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT)
+                quit = true;
+            if (event.type==SDL_KEYDOWN && event.key.keysym.sym == SDLK_q)
+                quit = true;
+            if (event.type==SDL_KEYDOWN && event.key.keysym.sym == SDLK_x)
                 quit = true;
             if (event.type == SDL_WINDOWEVENT) {
                 if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
