@@ -19,7 +19,17 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+/*
+    usage: jackfft [jack client name] [jack source name]
+
+    or
+
+    usage: jackfft [options]
+*/
+
 // #define DISP_NO_COLOR 1
+// #define DISP_NO_SHORT 1
+// #define DISP_NO_AVG 1
 
 #include <SDL2/SDL.h>
 #include <cstdio>
@@ -77,9 +87,9 @@ void window_resize(int width, int height) {
 }
 
 void color_from_value(float v, float &r, float &g, float &b) {
-    #if DISP_NO_COLOR
+#if DISP_NO_COLOR
     r = g = b = 1.0;
-    #else
+#else
     // v=1.0-v;
     if (v < 0.0)
         r = 1.0 + v, g = 0, b = 0;
@@ -100,7 +110,7 @@ void color_from_value(float v, float &r, float &g, float &b) {
                         r = (v - 0.8) * 5.0, g = 0, b = 1;
                     else // blue -> purple
                         r = 1, g = v - 1.0, b = 1;
-    #endif
+#endif
 }
 
 int main(int argc, char **argv) {
@@ -192,9 +202,9 @@ int main(int argc, char **argv) {
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT)
                 quit = true;
-            if (event.type==SDL_KEYDOWN && event.key.keysym.sym == SDLK_q)
+            if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_q)
                 quit = true;
-            if (event.type==SDL_KEYDOWN && event.key.keysym.sym == SDLK_x)
+            if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_x)
                 quit = true;
             if (event.type == SDL_WINDOWEVENT) {
                 if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
@@ -302,6 +312,8 @@ int main(int argc, char **argv) {
                  buff_disp_prev[i + 1] / 2.0f) /
                 2.0f;
             color_from_value(x1 + y * 0.3, c_r, c_g, c_b);
+#if DISP_NO_SHORT
+#else
             if ((v > 0) && (v < 1)) {
                 // glColor4f(c_r,c_g,c_b, y/2.0);
                 // glVertex2f(x1, 0);
@@ -309,9 +321,16 @@ int main(int argc, char **argv) {
                 // glVertex2f(x2, v);
                 // glVertex2f(x1, v);
 
+#if DISP_NO_AVG
+                SDL_SetRenderDrawColor(rrenderer, Uint8(255 * c_r),
+                                       Uint8(255 * c_g), Uint8(255 * c_b),
+                                       Uint8((y * 0.6 + 0.4) * 255.0));
+#else
                 SDL_SetRenderDrawColor(rrenderer, Uint8(255 * c_r),
                                        Uint8(255 * c_g), Uint8(255 * c_b),
                                        Uint8((y / 2.0) * 255.0));
+#endif
+
                 SDL_FRect rect;
                 rect.x = x1 * w_w;
                 rect.y = (1 - v) * w_h;
@@ -319,26 +338,29 @@ int main(int argc, char **argv) {
                 rect.h = v * w_h;
                 SDL_RenderFillRectF(rrenderer, &rect);
             }
+#endif
 
-            if ((y > 0) && (y < 1)) {
-                // //glColor4f(1, y, 0, 1);
-                // glColor4f(c_r, c_g, c_b, y*0.6+0.4);
-                // glVertex2f(x1, 0);
-                // glVertex2f(x2, 0);
-                // glColor4f(c_r, c_g, c_b, y);
-                // glVertex2f(x2, y);
-                // glVertex2f(x1, y);
-
-                SDL_SetRenderDrawColor(rrenderer, Uint8(255 * c_r),
-                                       Uint8(255 * c_g), Uint8(255 * c_b),
-                                       Uint8((y * 0.6 + 0.4) * 255.0));
-                SDL_FRect rect;
-                rect.x = x1 * w_w;
-                rect.y = (1 - y) * w_h;
-                rect.w = (x2 - x1) * w_w;
-                rect.h = y * w_h;
-                SDL_RenderFillRectF(rrenderer, &rect);
-            }
+#if DISP_NO_AVG
+#else
+                if ((y > 0) && (y < 1)) {
+                    // //glColor4f(1, y, 0, 1);
+                    // glColor4f(c_r, c_g, c_b, y*0.6+0.4);
+                    // glVertex2f(x1, 0);
+                    // glVertex2f(x2, 0);
+                    // glColor4f(c_r, c_g, c_b, y);
+                    // glVertex2f(x2, y);
+                    // glVertex2f(x1, y);
+                    SDL_SetRenderDrawColor(rrenderer, Uint8(255 * c_r),
+                                           Uint8(255 * c_g), Uint8(255 * c_b),
+                                           Uint8((y * 0.6 + 0.4) * 255.0));
+                    SDL_FRect rect;
+                    rect.x = x1 * w_w;
+                    rect.y = (1 - y) * w_h;
+                    rect.w = (x2 - x1) * w_w;
+                    rect.h = y * w_h;
+                    SDL_RenderFillRectF(rrenderer, &rect);
+                }
+#endif
         }
         SDL_RenderPresent(rrenderer);
     }
